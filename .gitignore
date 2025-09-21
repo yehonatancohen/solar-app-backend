@@ -1,0 +1,55 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+env/
+venv/
+
+# Environment variables
+.env
+.env.*
+
+# Database files (SQLite, test DBs)
+*.db
+*.sqlite3
+
+# Alembic
+alembic/versions/*.pyc
+alembic.ini
+
+# Logs
+*.log
+logs/
+*.coverage
+coverage.xml
+htmlcov/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+
+# Build
+dist/
+build/
+*.egg-info/
+
+# Docker
+*.pid
+*.tar
+docker-compose.override.yml
+
+# Cache
+.cache/
+.mypy_cache/
+.pytest_cache/
+__pypackages__/
+
+# Reports
+report.html
