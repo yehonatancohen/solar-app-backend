@@ -14,10 +14,12 @@ from app.routers.notifications import router as notifications_router
 app = FastAPI(title="Solar Sizing API", version="0.1.0")
 
 # CORS
-origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
+explicit = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins or ["*"],
+    allow_origins=explicit,                             # localhost, prod site, etc.
+    allow_origin_regex=r"^https://.*\.usercontent\.goog$",  # AI Studio rotating origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
