@@ -7,7 +7,7 @@ from argon2 import PasswordHasher
 import jwt
 
 from app.db import get_session
-from app.models import User
+from app.models import User, PaymentMethod
 from app.schemas import RegisterIn, LoginIn, TokenOut, UserOut
 from app.config import settings
 
@@ -38,6 +38,19 @@ async def register(payload: RegisterIn, session: AsyncSession = Depends(get_sess
         is_active=True,
     )
     session.add(user)
+    await session.flush()
+
+    payment_details: dict[str, str]
+    if payload.payment.method == "visa":
+        payment_details = {"last4": payload.payment.card_number[-4:]}
+    else:
+        payment_details = {"phone_number": payload.payment.phone_number}
+    payment = PaymentMethod(
+        user_id=user.id,
+        method_type=payload.payment.method,
+        details_json=payment_details,
+    )
+    session.add(payment)
     await session.commit()
     await session.refresh(user)
     return user

@@ -47,3 +47,62 @@ class Calculation(Base):
     version: Mapped[int] = mapped_column(Integer, default=1)
     results_json: Mapped[dict] = mapped_column(JSON)
     created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
+
+
+class PaymentMethod(Base):
+    __tablename__ = "payment_methods"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    method_type: Mapped[str] = mapped_column(String(50))
+    details_json: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
+
+
+class Visualization(Base):
+    __tablename__ = "visualizations"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    chart_type: Mapped[str] = mapped_column(String(50))
+    config_json: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
+
+
+class Report(Base):
+    __tablename__ = "reports"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    format: Mapped[str] = mapped_column(String(20))
+    deliver_to_json: Mapped[dict] = mapped_column(JSON)
+    status: Mapped[str] = mapped_column(String(20), default="prepared")
+    created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
+
+
+class SocialLink(Base):
+    __tablename__ = "social_links"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    platform: Mapped[str] = mapped_column(String(50))
+    handle: Mapped[str] = mapped_column(String(200))
+    created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    message: Mapped[str] = mapped_column(String(1000))
+    delivery_channel: Mapped[str] = mapped_column(String(50), default="push")
+    status: Mapped[str] = mapped_column(String(20), default="scheduled")
+    schedule_json: Mapped[dict | None] = mapped_column(JSON, default=None)
+    created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
+
+
+class Dashboard(Base):
+    __tablename__ = "dashboards"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    name: Mapped[str] = mapped_column(String(200))
+    preference: Mapped[str] = mapped_column(String(100))
+    layout_json: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
