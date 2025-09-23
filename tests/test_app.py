@@ -1,5 +1,9 @@
+import hashlib
+import hmac
+import json
 import os
 import sys
+import time
 from pathlib import Path
 from uuid import uuid4
 
@@ -8,6 +12,9 @@ from fastapi.testclient import TestClient
 
 TEST_DB_URL = "sqlite+aiosqlite:///./test.db"
 os.environ["DATABASE_URL"] = TEST_DB_URL
+os.environ["STRIPE_SECRET_KEY"] = "sk_test_123"
+os.environ["STRIPE_WEBHOOK_SECRET"] = "whsec_test"
+os.environ["FRONTEND_DOMAIN"] = "https://frontend.test"
 
 TEST_DB_PATH = Path("./test.db")
 if TEST_DB_PATH.exists():
@@ -21,6 +28,25 @@ from app.main import app  # noqa: E402
 from app.calcs import solar  # noqa: E402
 
 
+@pytest.fixture(autouse=True)
+def mock_stripe_checkout(monkeypatch):
+    from app.routers import payments as payments_router
+
+    def _create(cls, **kwargs):
+        return {
+            "id": f"cs_test_{uuid4().hex}",
+            "url": "https://checkout.stripe.com/pay/test-session",
+            "mode": "payment",
+        }
+
+    monkeypatch.setattr(
+        payments_router.stripe.checkout.Session,
+        "create",
+        classmethod(_create),
+    )
+    yield
+
+
 @pytest.fixture(scope="module")
 def client():
     if TEST_DB_PATH.exists():
@@ -31,10 +57,41 @@ def client():
         TEST_DB_PATH.unlink()
 
 
+def trigger_stripe_completion(client: TestClient, *, user_id: int, session_id: str) -> None:
+    event = {
+        "id": f"evt_{uuid4().hex}",
+        "object": "event",
+        "type": "checkout.session.completed",
+        "data": {
+            "object": {
+                "id": session_id,
+                "metadata": {"user_id": str(user_id)},
+            }
+        },
+    }
+    payload = json.dumps(event)
+    timestamp = int(time.time())
+    secret = os.environ["STRIPE_WEBHOOK_SECRET"].encode()
+    signature = hmac.new(
+        secret, f"{timestamp}.{payload}".encode(), hashlib.sha256
+    ).hexdigest()
+    header = f"t={timestamp},v1={signature}"
+    resp = client.post(
+        "/payments/webhook/stripe",
+        data=payload,
+        headers={
+            "Stripe-Signature": header,
+            "Content-Type": "application/json",
+        },
+    )
+    assert resp.status_code == 200, resp.text
+
+
 def create_auth_header(
     client: TestClient,
     *,
     payment: dict | None = None,
+    activate: bool = True,
 ) -> dict[str, str]:
     email = f"user_{uuid4().hex}@example.com"
     password = "Passw0rd!"
@@ -52,12 +109,31 @@ def create_auth_header(
         },
     )
     assert register_resp.status_code == 200, register_resp.text
+    user_data = register_resp.json()
+    assert user_data["is_active"] is False
     login_resp = client.post(
         "/auth/login", json={"email": email, "password": password}
     )
     assert login_resp.status_code == 200, login_resp.text
-    token = login_resp.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    login_data = login_resp.json()
+    assert login_data["is_active"] is False
+    token = login_data["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    if activate:
+        checkout_resp = client.post(
+            "/payments/checkout",
+            json={"provider": "stripe"},
+            headers=headers,
+        )
+        assert checkout_resp.status_code == 200, checkout_resp.text
+        session_id = checkout_resp.json()["session_id"]
+        trigger_stripe_completion(
+            client, user_id=user_data["id"], session_id=session_id
+        )
+        me_resp = client.get("/auth/me", headers=headers)
+        assert me_resp.status_code == 200
+        assert me_resp.json()["is_active"] is True
+    return headers
 
 
 def test_health_endpoint(client: TestClient):
@@ -85,6 +161,13 @@ def test_projects_require_auth(client: TestClient):
     resp = client.get("/projects")
     assert resp.status_code == 401
     assert resp.json()["detail"] == "Missing token"
+
+
+def test_inactive_user_needs_payment(client: TestClient):
+    headers = create_auth_header(client, activate=False)
+    resp = client.get("/projects", headers=headers)
+    assert resp.status_code == 402
+    assert resp.json()["detail"] == "Payment required"
 
 
 def test_project_flow_with_calculation(client: TestClient):

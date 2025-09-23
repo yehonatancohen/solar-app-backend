@@ -4,13 +4,13 @@ from sqlalchemy import select, desc
 from app.db import get_session
 from app.models import Project, ProjectInputs, Calculation, User
 from app.schemas import CalcResultOut
-from app.deps import auth_required
+from app.deps import active_user_required
 from app.calcs import solar
 
 router = APIRouter()
 
 @router.post("/{project_id}/calculate", response_model=CalcResultOut)
-async def run_calc(project_id: int, session: AsyncSession = Depends(get_session), user: User = Depends(auth_required)):
+async def run_calc(project_id: int, session: AsyncSession = Depends(get_session), user: User = Depends(active_user_required)):
     proj = (await session.execute(select(Project).where(Project.id == project_id))).scalar_one_or_none()
     if not proj or proj.owner_id != user.id:
         raise HTTPException(status_code=404, detail="Project not found")

@@ -5,7 +5,7 @@ from sqlalchemy import select, desc
 from app.db import get_session
 from app.models import Notification, User
 from app.schemas import NotificationCreate, NotificationOut
-from app.deps import auth_required
+from app.deps import active_user_required
 
 router = APIRouter()
 
@@ -14,7 +14,7 @@ router = APIRouter()
 async def create_notification(
     payload: NotificationCreate,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(auth_required),
+    user: User = Depends(active_user_required),
 ):
     notification = Notification(
         user_id=user.id,
@@ -33,7 +33,7 @@ async def create_notification(
 @router.get("", response_model=list[NotificationOut])
 async def list_notifications(
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(auth_required),
+    user: User = Depends(active_user_required),
 ):
     res = await session.execute(
         select(Notification)

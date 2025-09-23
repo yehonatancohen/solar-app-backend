@@ -9,6 +9,7 @@ import jwt
 from app.db import get_session
 from app.models import User, PaymentMethod
 from app.schemas import RegisterIn, LoginIn, TokenOut, UserOut
+from app.deps import auth_required
 from app.config import settings
 
 router = APIRouter()
@@ -19,10 +20,6 @@ def create_access_token(sub: str, expires_minutes: int = None):
     expire = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes or settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode = {"sub": sub, "exp": expire}
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-
-async def get_current_user(session: AsyncSession = Depends(get_session), token: str = None):
-    # Expect token via Authorization header from dependency in routers, simplified here.
-    raise NotImplementedError("Use 'auth_required' dependency from routers to inject current user.")
 
 @router.post("/register", response_model=UserOut)
 async def register(payload: RegisterIn, session: AsyncSession = Depends(get_session)):
@@ -35,7 +32,7 @@ async def register(payload: RegisterIn, session: AsyncSession = Depends(get_sess
         email=str(payload.email),
         password_hash=ph.hash(payload.password),
         role="user",
-        is_active=True,
+        is_active=False,
     )
     session.add(user)
     await session.flush()
@@ -66,4 +63,9 @@ async def login(payload: LoginIn, session: AsyncSession = Depends(get_session)):
     except Exception:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     token = create_access_token(sub=str(user.id))
-    return TokenOut(access_token=token)
+    return TokenOut(access_token=token, is_active=user.is_active)
+
+
+@router.get("/me", response_model=UserOut)
+async def me(user: User = Depends(auth_required)):
+    return user
