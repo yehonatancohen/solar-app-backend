@@ -5,7 +5,7 @@ from sqlalchemy import select, desc
 from app.db import get_session
 from app.models import Project, Visualization, User
 from app.schemas import VisualizationCreate, VisualizationOut
-from app.deps import auth_required
+from app.deps import active_user_required
 
 router = APIRouter()
 
@@ -24,7 +24,7 @@ async def create_visualization(
     project_id: int,
     payload: VisualizationCreate,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(auth_required),
+    user: User = Depends(active_user_required),
 ):
     await _get_owned_project(project_id, user, session)
     viz = Visualization(
@@ -42,7 +42,7 @@ async def create_visualization(
 async def list_visualizations(
     project_id: int,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(auth_required),
+    user: User = Depends(active_user_required),
 ):
     await _get_owned_project(project_id, user, session)
     res = await session.execute(

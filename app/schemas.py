@@ -45,6 +45,7 @@ class LoginIn(BaseModel):
 class TokenOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    is_active: bool
 
 # Users
 class UserOut(BaseModel):
@@ -63,6 +64,10 @@ class PaymentMethodOut(BaseModel):
     details_json: dict
     class Config:
         from_attributes = True
+
+
+class PaymentCheckoutIn(BaseModel):
+    provider: Literal["stripe", "mobile"]
 
 # Projects
 class ProjectCreate(BaseModel):

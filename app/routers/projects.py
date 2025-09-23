@@ -4,12 +4,12 @@ from sqlalchemy import select, desc
 from app.db import get_session
 from app.models import Project, ProjectInputs, Calculation, User
 from app.schemas import ProjectCreate, ProjectOut, InputsCreate, InputsOut
-from app.deps import auth_required
+from app.deps import active_user_required
 
 router = APIRouter()
 
 @router.post("", response_model=ProjectOut)
-async def create_project(payload: ProjectCreate, session: AsyncSession = Depends(get_session), user: User = Depends(auth_required)):
+async def create_project(payload: ProjectCreate, session: AsyncSession = Depends(get_session), user: User = Depends(active_user_required)):
     proj = Project(owner_id=user.id, org_id=user.org_id, name=payload.name, site_location_json=payload.site_location_json, currency=payload.currency)
     session.add(proj)
     await session.commit()
@@ -17,12 +17,12 @@ async def create_project(payload: ProjectCreate, session: AsyncSession = Depends
     return proj
 
 @router.get("", response_model=list[ProjectOut])
-async def list_projects(session: AsyncSession = Depends(get_session), user: User = Depends(auth_required)):
+async def list_projects(session: AsyncSession = Depends(get_session), user: User = Depends(active_user_required)):
     res = await session.execute(select(Project).where(Project.owner_id == user.id).order_by(desc(Project.created_at)))
     return res.scalars().all()
 
 @router.post("/{project_id}/inputs", response_model=InputsOut)
-async def save_inputs(project_id: int, payload: InputsCreate, session: AsyncSession = Depends(get_session), user: User = Depends(auth_required)):
+async def save_inputs(project_id: int, payload: InputsCreate, session: AsyncSession = Depends(get_session), user: User = Depends(active_user_required)):
     proj = (await session.execute(select(Project).where(Project.id == project_id))).scalar_one_or_none()
     if not proj or proj.owner_id != user.id:
         raise HTTPException(status_code=404, detail="Project not found")

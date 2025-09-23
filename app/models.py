@@ -17,7 +17,7 @@ class User(Base):
     email_verified_at: Mapped[DateTime | None] = mapped_column(DateTime, nullable=True)
     password_hash: Mapped[str] = mapped_column(String(500))
     role: Mapped[str] = mapped_column(String(50), default="user")
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
 
 class Project(Base):
@@ -56,6 +56,20 @@ class PaymentMethod(Base):
     method_type: Mapped[str] = mapped_column(String(50))
     details_json: Mapped[dict] = mapped_column(JSON)
     created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
+
+
+class Payment(Base):
+    __tablename__ = "payments"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    provider: Mapped[str] = mapped_column(String(50))
+    status: Mapped[str] = mapped_column(String(20), default="pending")
+    external_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    metadata_json: Mapped[dict | None] = mapped_column(JSON, default=None)
+    created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
 
 
 class Visualization(Base):

@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     DATABASE_URL: str = "sqlite+aiosqlite:///./dev.db"
     ALLOWED_ORIGINS: str = "http://localhost:3000"
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
+    FRONTEND_DOMAIN: str = "http://localhost:3000"
 
     class Config:
         env_file = ".env"

@@ -5,7 +5,7 @@ from sqlalchemy import select, desc
 from app.db import get_session
 from app.models import Project, Report, User
 from app.schemas import ReportRequest, ReportOut
-from app.deps import auth_required
+from app.deps import active_user_required
 
 router = APIRouter()
 
@@ -24,7 +24,7 @@ async def generate_report(
     project_id: int,
     payload: ReportRequest,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(auth_required),
+    user: User = Depends(active_user_required),
 ):
     await _get_owned_project(project_id, user, session)
     report = Report(
@@ -43,7 +43,7 @@ async def generate_report(
 async def list_reports(
     project_id: int,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(auth_required),
+    user: User = Depends(active_user_required),
 ):
     await _get_owned_project(project_id, user, session)
     res = await session.execute(

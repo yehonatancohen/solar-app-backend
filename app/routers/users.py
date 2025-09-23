@@ -10,7 +10,7 @@ from app.schemas import (
     DashboardCreate,
     DashboardOut,
 )
-from app.deps import auth_required
+from app.deps import active_user_required
 
 router = APIRouter()
 
@@ -19,7 +19,7 @@ router = APIRouter()
 async def create_social_link(
     payload: SocialLinkCreate,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(auth_required),
+    user: User = Depends(active_user_required),
 ):
     link = SocialLink(user_id=user.id, platform=payload.platform, handle=payload.handle)
     session.add(link)
@@ -31,7 +31,7 @@ async def create_social_link(
 @router.get("/social-links", response_model=list[SocialLinkOut])
 async def list_social_links(
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(auth_required),
+    user: User = Depends(active_user_required),
 ):
     res = await session.execute(
         select(SocialLink)
@@ -45,7 +45,7 @@ async def list_social_links(
 async def create_dashboard(
     payload: DashboardCreate,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(auth_required),
+    user: User = Depends(active_user_required),
 ):
     dash = Dashboard(
         user_id=user.id,
@@ -63,7 +63,7 @@ async def create_dashboard(
 async def list_dashboards(
     preference: str | None = None,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(auth_required),
+    user: User = Depends(active_user_required),
 ):
     stmt = select(Dashboard).where(Dashboard.user_id == user.id)
     if preference:
